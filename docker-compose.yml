@@ -1,0 +1,18 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    ports:
+      - "8011:8011"
+
+  ui:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    ports:
+      - "8514:8514"
+    environment:
+      - API_URL=http://api:8011
+    depends_on:
+      - api
