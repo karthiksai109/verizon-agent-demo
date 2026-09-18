@@ -32,7 +32,7 @@ with st.sidebar:
     st.code("something something quantum banana", language=None)
     st.caption("Last one = off-domain → watch the abstention gate refuse instead of hallucinating.")
 
-tab_chat, tab_metrics, tab_arch, tab_resume = st.tabs(["💬 Chat + Trace", "📊 Metrics", "🏗 Architecture", "📄 Resume claims map"])
+tab_chat, tab_metrics, tab_arch, tab_story, tab_whiteboard, tab_resume = st.tabs(["💬 Chat + Trace", "📊 Metrics", "🏗 Architecture", "� Story walkthrough", "✏️ Whiteboard drill", "�📄 Resume claims map"])
 
 
 def render_trace(trace: dict, resp: dict):
@@ -140,6 +140,80 @@ with tab_arch:
 - FastAPI container → Lambda handlers behind API Gateway (serverless, spiky chat traffic)
 - SQLite `events` → Datadog RUM metrics; this Metrics tab → QuickSight dataset for exec KPIs
 """)
+
+with tab_story:
+    st.subheader("Inbox → answer: one message's journey (the recitable story)")
+    st.markdown("Customer types **\u201cmy internet is down in 75024\u201d** — follow the journey:")
+    dot_story = """
+    digraph S {
+      rankdir=TB; node [shape=box, style="rounded,filled", fillcolor="#f6f8fa"];
+      M1 [label="1 · Message arrives\nAPI layer (Lambda/API GW)", fillcolor="#fff3cd"];
+      M2 [label="2 · Session & memory\nDynamoDB: load past turns\n(Bedrock remembers NOTHING)"];
+      M3 [label="3 · Router assigns agent\nscore all 6 → threshold → stickiness\nnetwork 0.41 wins", fillcolor="#d1ecf1"];
+      M4 [label="4 · Network agent's tools\ncheck_outage(\"75024\")\nmodel proposes, code disposes"];
+      M5 [label="5 · Scoped RAG\nnetwork policy index only\ntop-3 chunks + scores"];
+      M6 [label="6 · Abstention gate\nweak retrieval? → refuse, don't invent"];
+      M7 [label="7 · One Bedrock Converse call\nreturns answer + token usage + latency"];
+      M8 [label="8 · Persist + telemetry\nsave turn, log cost/tokens/confidence", fillcolor="#d4edda"];
+      M1 -> M2 -> M3 -> M4 -> M5 -> M6 -> M7 -> M8;
+      M3 -> G [label="all scores < threshold"];
+      G [label="Generalist asks ONE\nclarifying question", fillcolor="#f8d7da"];
+    }
+    """
+    st.graphviz_chart(dot_story)
+    st.markdown("""**Trust chain (how you know the answer is right):**
+- **Citations** — every claim carrys [ref] you can expand to the policy text
+- **Tools for facts** — balances/outages come from API calls, never model memory
+- **Abstain > hallucinate** — below threshold it says 'I don't know' and escalates
+- **Telemetry** — every call logs tokens/latency/cost/confidence; 👍/👎 feeds evals
+
+**తెలుగులో:** Message → memory load → router score చేసి agent ఇస్తుంది → tools run → scoped docs retrieve → confidence తక్కువైతే refuse → OK అయితే ఒక Bedrock call → metrics log. ఈ వరుసే interview లో చెప్పాలి.""")
+
+with tab_whiteboard:
+    st.subheader("Draw this on the interview whiteboard in ~90 seconds")
+    st.markdown("Practice until you can draw this **unaided, in this order, while narrating**:")
+    st.code("""
+[CUSTOMER]
+     │ ① types question
+     ▼
+[ROUTER] ② scores all 6 agents, threshold, stickiness
+     │ low conf ──► [GENERALIST: clarify]
+     ▼
+┌──── 6 SPECIALIST AGENTS ────┐   ③ routing = code + scores, not vibes
+│ Billing │ Network │ Plans   │
+│ Device  │ Onboarding│ ...   │   each = prompt + tools + OWN policy index
+└──┬───────────┬─────────────┘
+   ▼ ④ tools   ▼ ⑤ scoped RAG
+[APIs/DB]   [vector store]
+   └────┬──────┘
+        ▼ ⑥ assemble: system + history(DynamoDB↔store) + chunks
+ [AMAZON BEDROCK — Claude]  ⑦ ONE stateless call → answer+tokens+latency
+        ▼
+ [Telemetry: Datadog/QuickSight]  ⑧ cost + trust per call
+        ▼
+ [CUSTOMER: cited, grounded answer]
+""", language=None)
+    c1, c2 = st.columns(2)
+    c1.markdown("""**Drawing script (order matters):**
+1. Customer box, arrow down
+2. Router box + side arrow to clarify box
+3. One wide box, divide into 6 cells (name 3 only, say 'and so on')
+4. Two arrows down: tools (left), policy index (right)
+5. Merging arrow into Bedrock box; label it **stateless**
+6. Small arrow sideways: DynamoDB with label 'we resend history'
+7. Down arrow out: telemetry box, label tokens/latency/cost
+8. Final arrow to customer, label 'cited answer ~1-2s'
+""")
+    c2.markdown("""**Say while drawing (the killer lines):**
+- *\u201CThe model proposes, code disposes — tools never run inside the model.\u201D*
+- *\u201CBedrock is stateless; memory is our store re-sent each call.\u201D*
+- *\u201CBelow the routing threshold we clarify — misrouting is worse than an extra turn.\u201D*
+- *\u201CWeak retrieval triggers abstention: no call, no cost, no hallucination.\u201D*
+- *\u201CEvery call logs tokens and latency — that's per-agent spend attribution.\u201D*
+
+**Time-check:** steps 1–3 by 20s, full diagram by 60s, then narrate trust chain 30s.
+""")
+    st.info("Drill: draw it on paper 3× today, 1× tomorrow morning. Day of interview: once in the waiting room.")
 
 with tab_resume:
     st.subheader("Every resume bullet → where to show it live")
